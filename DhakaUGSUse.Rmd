@@ -1,0 +1,116 @@
+---
+title: "Dhaka UGS Use"
+output: html_document
+---
+
+This is R Markdown document to provide the modelling conducted to analyse the Urban greenspace usage in Dhaka.
+
+Loading the packages used in this study
+```{r load packages}
+
+library(rmarkdown)
+library(MASS)
+library(rcompanion)
+library(mediation)
+
+```
+
+## Load the data (CSV) file and convert it into data object
+
+```{r load data}
+park_data <- read.csv(file.choose())
+pdata <- park_data
+```
+
+## Modelling the UGS use intentsity: Model-1(Base Model)
+
+```{r model-1}
+#UGSmodelbase (Model-1)
+UGSmodelbase <- glm(UseBNew~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelbase)
+#Odds ratio
+exp(coef(UGSmodelbase))
+#odds ratio 95% CI
+exp(confint(UGSmodelbase))
+#model-1 fit details
+nagelkerke(UGSmodelbase)
+
+```
+
+# Modelling the UGS use intentsity: Model-2(Base Model and NCDs/Chronic)
+
+```{r model-2}
+#UGSmodelbase + NCDs/Chronic (Model-2)
+UGSmodelNCDs <- glm(UseBNew~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment + chronic_disease, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelNCDs)
+#Odds ratio
+exp(coef(UGSmodelNCDs))
+#odds ratio 95% CI
+exp(confint(UGSmodelNCDs))
+#model-2 fit details
+nagelkerke(UGSmodelNCDs)
+
+```
+
+# Modelling the UGS use intentsity: Model-3(Base Model and GreenRx)
+```{r model-3}
+#UGSmodelbase + GreenRx (Model-3)
+UGSmodelGreenRx <- glm(UseBNew~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment + GreenRx, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelGreenRx)
+#Odds ratio
+exp(coef(UGSmodelGreenRx))
+#odds ratio 95% CI
+exp(confint(UGSmodelGreenRx))
+#model-3 fit details
+nagelkerke(UGSmodelGreenRx)
+
+```
+
+
+#Fit models for mediation analyses
+```{r fitting full models for mediation}
+#intensity model
+ugsintensityModelF <- glm(UseBNew~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment + chronic_disease + GreenRx, family = binomial(link='logit'), data= pdata)
+
+#duration model
+durModel <- glm(duration30 ~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment + chronic_disease + GreenRx, family = binomial(link='logit'), data= pdata)
+
+#frequency model
+frModel <- glm(freqRe ~ gender+ edu+ emplF+ TrMode + UGSPc +Attraction + Accessibility + Attachment + chronic_disease + GreenRx, family = binomial(link='logit'), data= pdata)
+
+#direct relationship between mediatior and predictor variable (greenRx is the mediator and Chronic is the predictor)
+med.greenRx <- glm (GreenRx ~ chronic_disease + gender+ edu+ emplF+ TrMode, family = binomial(link='logit'), data= pdata)
+```
+
+
+#UGS Use intensity, NCDs and GreenRx mediation
+```{r mediation for intensity}
+#mediation between the full fit model and mediator model
+set.seed (123)
+med.output <- mediate(med.greenRx, ugsintensityModelF, treat = "chronic_disease", mediator = "GreenRx", robustSE = TRUE, sims = 1000)
+summary(med.output)
+plot(med.output, main = "UGS intensity of use mediation effects of GreenRx on NCDs", col="blue", xlab="Effect Size", xlim=c(-0.4,0.15))
+```
+
+
+#UGS Use duration, NCDs and GreenRx mediation
+```{r mediation for duration}
+#mediation between the duration model and mediator model
+set.seed (123)
+med.output1 <- mediate(med.greenRx, durModel, treat = "chronic_disease", mediator = "GreenRx", robustSE = TRUE, sims = 1000)
+summary(med.output1)
+plot(med.output1, main = "UGS duration of use mediation effects of GreenRx on NCDs", col="purple", xlab="Effect Size", xlim=c(-0.4,0.15))
+```
+
+#UGS Use frequency, NCDs and GreenRx mediation
+```{r mediation for frequency}
+#mediation between the frequency model and mediator model
+set.seed (123)
+med.output2 <- mediate(med.greenRx, frModel, treat = "chronic_disease", mediator = "GreenRx", robustSE = TRUE, sims = 1000)
+summary(med.output2)
+plot(med.output2, main = "UGS frequency of use mediation effects of GreenRx on NCDs", col="olivedrab", xlab="Effect Size", xlim=c(-0.4,0.15))
+```
+
+#Notes: ACME- average causal mediation effect; ADE- average direct effect; Total effect = ACME + ADE
+
+
