@@ -1,0 +1,114 @@
+---
+title: "Dhaka UGS Use ParkRx"
+output: html_document
+---
+
+This is R Markdown document to provide the modelling conducted to analyse the Urban greenspace usage in Dhaka.
+
+Loading the packages used in this study
+```{r load packages}
+
+library(rmarkdown)
+library(MASS)
+library(car)
+library(rcompanion)
+library(mediation)
+
+```
+
+## Load the data (CSV) file and convert it into data object
+
+```{r load data}
+park_data <- read.csv(file.choose())
+pdata <- park_data
+```
+
+## Modelling the UGS use intentsity: Model-1(Base Model)
+
+```{r model-1}
+#UGSmodelbase (Model-1)
+UGSmodelbase <- glm(UseIntensity~ gender+ edu+ emplF+ TrMode + GSPc +Attractiveness + Accessibility + Attachment, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelbase)
+#Odds ratio
+exp(coef(UGSmodelbase))
+#odds ratio 95% CI
+exp(confint(UGSmodelbase))
+#model-1 fit details
+nagelkerke(UGSmodelbase)
+vif(UGSmodelbase)
+
+```
+
+# Modelling the UGS use intentsity: Model-2(Base Model and NCDs/Chronic)
+
+```{r model-2}
+#UGSmodelbase + NCDs/Chronic (Model-2)
+UGSmodelNCDs <- glm(UseIntensity~ gender+ edu+ emplF+ TrMode + GSPc +Attractiveness + Accessibility + Attachment + NCDs, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelNCDs)
+#Odds ratio
+exp(coef(UGSmodelNCDs))
+#odds ratio 95% CI
+exp(confint(UGSmodelNCDs))
+#model-2 fit details
+nagelkerke(UGSmodelNCDs)
+vif(UGSmodelNCDs)
+
+```
+
+# Modelling the UGS use intentsity: Model-3(Base Model and ParkRx)
+```{r model-3}
+#UGSmodelbase + ParkRx (Model-3)
+UGSmodelParkRx <- glm(UseIntensity~ gender+ edu+ emplF+ TrMode + GSPc +Attractiveness + Accessibility + Attachment + ParkRx, family = binomial(link='logit'), data= pdata)
+summary(UGSmodelParkRx)
+#Odds ratio
+exp(coef(UGSmodelParkRx))
+#odds ratio 95% CI
+exp(confint(UGSmodelParkRx))
+#model-3 fit details
+nagelkerke(UGSmodelParkRx)
+vif(UGSmodelParkRx)
+```
+
+
+#Fit models for mediation analyses
+```{r fitting full models for mediation}
+
+#direct relationship between mediatior and predictor variable (ParkRx is the mediator and Chronic is the predictor) model 4
+med.ParkRx <- glm (ParkRx ~ NCDs + GSPc +Attractiveness + Accessibility + Attachment +gender+ edu+ emplF+ TrMode, family = binomial(link='logit'), data= pdata)
+summary(med.ParkRx)
+#Odds ratio
+exp(coef(med.ParkRx))
+#odds ratio 95% CI
+exp(confint(med.ParkRx))
+#model-2 fit details
+nagelkerke(med.ParkRx)
+
+
+#intensity full model (model 5)
+Outputmodel5 <- glm(UseIntensity~ gender+ edu+ emplF+ TrMode + GSPc +Attractiveness + Accessibility + Attachment + NCDs + ParkRx, family = binomial(link='logit'), data= pdata)
+summary(Outputmodel5)
+#Odds ratio
+exp(coef(Outputmodel5))
+#odds ratio 95% CI
+exp(confint(Outputmodel5))
+#model-2 fit details
+nagelkerke(Outputmodel5)
+
+
+```
+
+
+
+#UGS Use intensity, NCDs and ParkRx mediation
+```{r mediation for intensity}
+#mediation between the full fit model and mediator model
+set.seed (123)
+med.output <- mediate(med.ParkRx, Outputmodel5, treat = "NCDs", mediator = "ParkRx", robustSE = TRUE, sims = 1000)
+summary(med.output)
+plot(med.output, main = "UGS intensity of use mediation effects of ParkRx on NCDs", col="black", xlab="Effect Size")
+```
+
+
+#Notes: ACME- average causal mediation effect; ADE- average direct effect; Total effect = ACME + ADE
+
+
